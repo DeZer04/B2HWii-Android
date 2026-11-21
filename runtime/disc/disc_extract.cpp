@@ -318,6 +318,7 @@ public:
         Aes128(kCommonKey).DecryptCbc(iv, header + 0x1BF, titleKey, 16);
         aes_ = std::make_unique<Aes128>(titleKey);
         dataStart_ = partition + PartitionDataOffset(header);
+        dataSize_ = static_cast<u64>(Be32(header + 0x2BC)) << 2;
     }
 
     void ReadData(u64 offset, u8* out, size_t size) override {
@@ -343,8 +344,16 @@ private:
         if (const u8* run = runs_.Find(index)) return run;
         std::vector<u8>& run = runs_.Reuse();
         run.resize(kRunBlocks * kBlockTotal);
-        ReadExact(read_, dataStart_ + index * kRunBlocks * kBlockTotal, run.data(), run.size());
-        for (u64 b = 0; b < kRunBlocks; ++b) {
+        // An image can end with its partition, inside the last run (the Indonesian translation's ISOs
+        // do): only the blocks the partition has are read, the rest of the run stays zero.
+        const u64 start = index * kRunBlocks * kBlockTotal;
+        u64 blocks = kRunBlocks;
+        if (dataSize_ != 0 && start + blocks * kBlockTotal > dataSize_) {
+            blocks = dataSize_ > start ? (dataSize_ - start) / kBlockTotal : 0;
+            std::fill(run.begin() + static_cast<std::ptrdiff_t>(blocks * kBlockTotal), run.end(), u8{0});
+        }
+        ReadExact(read_, dataStart_ + start, run.data(), static_cast<size_t>(blocks * kBlockTotal));
+        for (u64 b = 0; b < blocks; ++b) {
             u8* block = run.data() + b * kBlockTotal;
             // Each block's data is chained from an IV kept in its still-encrypted hash area.
             aes_->DecryptCbc(block + 0x3D0, block + kBlockHeader, block + kBlockHeader, kBlockData);
@@ -355,6 +364,7 @@ private:
     const ReadAt& read_;
     std::unique_ptr<Aes128> aes_;
     u64 dataStart_ = 0;
+    u64 dataSize_ = 0;  // the partition's encrypted size, from its header (0: unknown)
     PieceCache runs_;
 };
 
