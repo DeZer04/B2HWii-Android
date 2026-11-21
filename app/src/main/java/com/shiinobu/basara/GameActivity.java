@@ -496,12 +496,23 @@ public final class GameActivity extends SDLActivity
     /** Settings > System in the game: the game file, updates and the report tools. */
     private void systemRows(SettingsMenu rows) {
         final boolean changed = AppFiles.discDifferences(this) != null;
-        rows.valueRow(Tr.t("Game File"), changed ? Tr.t("RBSJ08, changed") : "RBSJ08", Tr.t("Change"), () ->
+        final IdEdition.State id = BuildConfig.ID_EDITION ? IdEdition.state(this) : null;
+        rows.valueRow(Tr.t("Game File"), id != null ? "RBSJ08 • " + id.describe()
+                : changed ? Tr.t("RBSJ08, changed") : "RBSJ08", Tr.t("Change"), () ->
                 new Sheet(this, Tr.t("Choose another game file?"), Tr.t("The game closes without saving; it "
                         + "starts again from the new file."))
                         .action(Tr.t("Choose"), null, true, false, () -> toLauncher(LauncherActivity.ACTION_DISC, null))
                         .action(Tr.t("Cancel"), null, false, false, null)
                         .show());
+        if (id != null) {
+            // The game closes while the patch goes in, so it asks first when the game is running.
+            rows.valueRow(Tr.t("Indonesian Translation"), id.describe(), id.indonesian ? Tr.t("Update") : Tr.t("Install"),
+                    () -> new Sheet(this, Tr.t("Indonesian Translation"), Tr.t("Install or update the translation? "
+                            + "The game closes without saving while the patch goes in."))
+                            .action(Tr.t("Continue"), null, true, false, () -> toLauncher(LauncherActivity.ACTION_PATCH, null))
+                            .action(Tr.t("Cancel"), null, false, false, null)
+                            .show());
+        }
         rows.valueRow(Tr.t("Check for Updates"), Updater.displayVersion(this), Tr.t("Check"),
                 () -> toLauncher(LauncherActivity.ACTION_UPDATE, null));
         rows.toggleRow(Tr.t("Auto Update"), BuildConfig.ONLINE_UPDATES ? Tr.t("Update on launch")
@@ -515,12 +526,23 @@ public final class GameActivity extends SDLActivity
                         .paragraph(Tr.t("Port by xu@shiinobu, continuing the work of WitherBlitz with the help of "
                                 + "WiiCompiled's code."))
                         .paragraph(Tr.t("Menu and touch button design, and the Unlock All idea, by hikki@datfooldive."))
+                        .paragraph(BuildConfig.ID_EDITION ? Tr.t("Indonesian translation and this edition's patch "
+                                + "installer by DeZer04.") : "")
                         .paragraph(Tr.t("Based on NSMB-Wii-Multiplayer-Recompilation and WiiCompiled (GPLv3). "
                                 + "Renderer techniques studied from Dolphin (GPLv2+)."))
                         .note(Tr.t("Touch control icons from game-icons.net by Lorc, Delapouite and contributors "
                                 + "(CC BY 3.0)."))
                         .action(Tr.t("Close"), null, true, false, null)
                         .show());
+        if (id != null) {
+            rows.actionRow(Tr.t("Indonesian translation page"), IdEdition.SITE_URL.replace("https://", ""), Tr.t("Open"), () -> {
+                try {
+                    startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(IdEdition.SITE_URL)));
+                } catch (android.content.ActivityNotFoundException ignored) {
+                    // no browser
+                }
+            });
+        }
         rows.actionRow(Tr.t("Project page on GitHub"), LauncherActivity.PROJECT_URL.replace("https://", ""),
                 Tr.t("Open"), () -> {
                     try {

@@ -248,7 +248,12 @@ final class SaveData {
     static boolean autoRestore(Context context) {
         try {
             if (hasSave(context)) return false;
-            final File copy = autoCopy();
+            File copy = autoCopy();
+            if (copy != null && !copy.isFile() && BuildConfig.ID_EDITION) {
+                // The ID edition's first start: the save the official app keeps outside its storage.
+                copy = new File(android.os.Environment.getExternalStorageDirectory(),
+                        AppFiles.OFFICIAL_HOME + "/Saves/Auto/" + AUTO_COPY);
+            }
             if (copy == null || !copy.isFile()) return false;
             importFrom(context, Uri.fromFile(copy));
             Log.i(TAG, "save restored from " + copy);

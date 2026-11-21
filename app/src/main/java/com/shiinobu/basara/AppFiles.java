@@ -41,7 +41,10 @@ final class AppFiles {
     }
 
     /** The app's folder on the phone's storage, spelled exactly so (homeDir fixes another case). */
-    static final String HOME = BuildConfig.BETA ? "Basara2Heroes-Beta" : "Basara2Heroes";
+    static final String HOME = BuildConfig.BETA ? "Basara2Heroes-Beta" : BuildConfig.ID_EDITION ? "Basara2Heroes-ID" : "Basara2Heroes";
+
+    /** The official app's folder, where the ID edition finds a save to bring over on its first start. */
+    static final String OFFICIAL_HOME = "Basara2Heroes";
 
     /**
      * /sdcard/Basara2Heroes (Beta: Basara2Heroes-Beta): everything of the game a player handles, which
@@ -381,6 +384,9 @@ final class AppFiles {
     /** Why the game can't be played, or null when it can: the unpacked game, or Read mode's file. */
     static String gameProblem(Context context) {
         final Uri source = gameSource(context);
+        if (source == null && BuildConfig.ID_EDITION && IdEdition.state(context).incomplete) {
+            return Tr.t("Installing the Indonesian patch didn't finish. Install it again.");
+        }
         if (source == null) return gameProblem(gameDir(context));
         if (source.toString().equals(checkedSource)) return checkedProblem;
         String problem;
@@ -416,6 +422,12 @@ final class AppFiles {
         return paths;
     }
 
+    /** The game's archive sizes now (DISC_ARCHIVES' order; -1 for one it lacks). */
+    static long[] currentArchiveSizes(Context context) { return archiveSizes(context); }
+
+    /** The original RBSJ08 disc's archive sizes? */
+    static boolean matchesOriginal(long[] sizes) { return java.util.Arrays.equals(sizes, DISC_ARCHIVE_SIZES); }
+
     private static long[] archiveSizes(Context context) {
         final long[] fromSource = sourceArchiveSizes(context);
         if (fromSource != null) return fromSource;
@@ -436,6 +448,8 @@ final class AppFiles {
      * match. A changed disc (a patch, a bad conversion) can still be played; this is only a warning.
      */
     static String discDifferences(Context context) {
+        // The Indonesian translation is a changed disc this edition is made for.
+        if (BuildConfig.ID_EDITION && IdEdition.state(context).indonesian) return null;
         final long[] sizes = archiveSizes(context);
         final StringBuilder out = new StringBuilder();
         for (int i = 0; i < DISC_ARCHIVES.length; ++i) {

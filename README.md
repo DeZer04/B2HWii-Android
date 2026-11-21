@@ -1,5 +1,20 @@
 # Sengoku Basara 2 Heroes for Android
 
+> [!NOTE]
+> **This branch (`id-edition`) builds the Indonesian edition**, "Basara 2 Heroes ID" (`com.dezer04.basara2id`): the
+> same port, installed next to the official app, that puts the Indonesian translation's Wii patch
+> ([DeZer04/sengoku-basara-2-heroes-id](https://github.com/DeZer04/sengoku-basara-2-heroes-id), releases `wii-v*`)
+> straight into the unpacked game: no patched ISO to make or download. It downloads the newest patch (an updater of a
+> few hundred KB when one fits the installed version, else the full patch), or takes a `.patch` file from the phone,
+> and tells the original disc, each translation release and a patch that stopped halfway apart. Only the Java app
+> changes (`IdPatch`, `IdEdition`, and the launcher and System menu); it ships with the official release's native
+> libraries. Build: stage `lib/arm64-v8a/*.so` and `assets/runtime/` from the official APK into
+> `generated/android-native/`, then `gradle assembleRelease -PbasaraSigning=<signing.properties>`
+> (`-PbasaraOfficial` builds the official app).
+>
+> **Edisi Indonesia:** aplikasi terpisah dari versi resmi. Pilih ISO/RVZ asli, ekstrak, lalu terjemahan dipasang
+> langsung dari aplikasi (unduh otomatis atau pilih file `.patch`); update terjemahan berikutnya cukup updater kecil.
+
 <div align="justify">
 
 An unofficial port of *Sengoku Basara 2 Heroes* (Wii, NTSC-J, `RBSJ08`) to Android (arm64) and Windows.

@@ -40,6 +40,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public final class LauncherActivity extends Activity {
     private static final int REQUEST_DISC = 1;
+    private static final int REQUEST_PATCH = 2;
     /** Set by GameActivity.restartForSession: open the game again once its old process is gone. */
     static final String EXTRA_RESTART_GAME = "restartGame";
     /** Set by the game's menu: what to do here before going back to it (ACTION_*). */
@@ -50,6 +51,8 @@ public final class LauncherActivity extends Activity {
     static final String ACTION_UPDATE = "update";
     /** Replace the save with EXTRA_FILE (a backup), or undo the last import when there is none. */
     static final String ACTION_IMPORT_SAVE = "importSave";
+    /** The Indonesian translation (ID edition): install or update it; the game waits in the background. */
+    static final String ACTION_PATCH = "patch";
     static final String EXTRA_FILE = "file";
 
     static final String PROJECT_URL = "https://github.com/PotatoRecomp/B2HWii-Android";
@@ -76,6 +79,9 @@ public final class LauncherActivity extends Activity {
     private boolean warned;      // the disc and GPU notices were given for this start
     private boolean launched;    // the game was opened: this screen is on its way out
     private boolean importing;   // a game file is being unpacked
+    private boolean patchChecked;  // the ID edition looked for a newer translation this start
+    /** What follows a successful unpack instead of the usual next step (the translation after Extract). */
+    private Runnable afterImport;
     /** What follows the update check: the next step at start, or back to the game. */
     private Runnable afterCheck;
 
@@ -93,7 +99,8 @@ public final class LauncherActivity extends Activity {
         final Intent start = getIntent();
         if (start != null && (start.getBooleanExtra(EXTRA_RESTART_GAME, false)
                 || ACTION_UPDATE.equals(start.getStringExtra(EXTRA_ACTION))
-                || ACTION_IMPORT_SAVE.equals(start.getStringExtra(EXTRA_ACTION)))) {
+                || ACTION_IMPORT_SAVE.equals(start.getStringExtra(EXTRA_ACTION))
+                || ACTION_PATCH.equals(start.getStringExtra(EXTRA_ACTION)))) {
             setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
         }
         CrashReport.installLauncherHandler(this);
@@ -160,6 +167,11 @@ public final class LauncherActivity extends Activity {
             refresh();
             afterCheck = this::launch;
             checkForUpdates(false);
+        } else if (ACTION_PATCH.equals(action)) {
+            warned = true;
+            patchChecked = true;
+            refresh();
+            patchMenu(false);
         }
         return true;
     }
@@ -202,6 +214,14 @@ public final class LauncherActivity extends Activity {
             if (ReleaseNotes.showIfNew(this, settings, this::next)) return;
         }
         if (importing) return;
+        if (BuildConfig.ID_EDITION && AppFiles.hasGameData(this) && IdEdition.state(this).incomplete) {
+            patchMenu(false);
+            return;
+        }
+        if (BuildConfig.ID_EDITION && !patchChecked && AppFiles.gameReady(this)) {
+            patchChecked = true;
+            if (checkPatchUpdate()) return;
+        }
         if (!AppFiles.gameReady(this)) {
             // The first start: the game file, once.
             pickDisc();
@@ -275,6 +295,10 @@ public final class LauncherActivity extends Activity {
     /** The button under the state line: choose the game file, or play once one is there. */
     private void onPrimary() {
         if (importing) return;
+        if (BuildConfig.ID_EDITION && AppFiles.hasGameData(this) && IdEdition.state(this).incomplete) {
+            patchMenu(false);
+            return;
+        }
         if (AppFiles.gameReady(this)) {
             warned = true;  // the notices were given; the player chose to go on
             launched = false;
@@ -295,6 +319,10 @@ public final class LauncherActivity extends Activity {
         final boolean ready = present && problem == null;
         if (importing) {
             showState(Tr.t("Loading your game…"));
+        } else if (!present && BuildConfig.ID_EDITION) {
+            showState(Tr.t("Choose your own ISO or RVZ of the game (Japan, RBSJ08): the original, and the app "
+                    + "installs the Indonesian translation, or one already patched. Unpack it once (about 4 GB), "
+                    + "or play it straight from the file."));
         } else if (!present) {
             showState(Tr.t("Choose your own ISO or RVZ of the game (Japan, RBSJ08). Unpack it once (about 4 GB), "
                     + "or play it straight from the file; afterwards the app goes straight into the game."));
@@ -303,12 +331,16 @@ public final class LauncherActivity extends Activity {
         } else if (updating) {
             showState(Tr.t("Checking for updates…"));
         } else {
-            showState("RBSJ08 • " + Tr.t("Ready to play"));
+            showState("RBSJ08 • " + (BuildConfig.ID_EDITION ? IdEdition.state(this).describe() + " • " : "")
+                    + Tr.t("Ready to play"));
         }
         // Shown only when the player has to act: no game yet, or a notice was put away.
         final boolean act = !importing && !updating && !launched && (!ready || warned);
         primary.setVisibility(act ? View.VISIBLE : View.GONE);
-        if (primaryLabel != null) primaryLabel.setText(ready ? Tr.t("Play") : Tr.t("Choose Game File"));
+        final boolean incomplete = BuildConfig.ID_EDITION && present && IdEdition.state(this).incomplete;
+        if (primaryLabel != null) {
+            primaryLabel.setText(ready ? Tr.t("Play") : incomplete ? Tr.t("Install Patch Again") : Tr.t("Choose Game File"));
+        }
     }
 
     @Override
@@ -881,6 +913,14 @@ public final class LauncherActivity extends Activity {
         if (requestCode == REQUEST_DISC && resultCode == RESULT_OK && data != null && data.getData() != null) {
             chooseHow(data.getData());
         }
+        if (requestCode == REQUEST_PATCH) {
+            if (resultCode == RESULT_OK && data != null && data.getData() != null) {
+                final Uri uri = data.getData();
+                runPatch(() -> getContentResolver().openInputStream(uri), null);
+            } else {
+                backToGame();
+            }
+        }
     }
 
     /**
@@ -928,9 +968,11 @@ public final class LauncherActivity extends Activity {
                 if (failure != null) {
                     message(Tr.t("Couldn't load the game"), failure + Tr.t("\n\nNothing was changed."), null);
                 } else {
+                    IdEdition.invalidate();
                     warned = false;
                     launched = false;
-                    next();
+                    if (BuildConfig.ID_EDITION && IdEdition.state(this).original) patchMenu(true);
+                    else next();
                 }
             });
         }, "game-read").start();
@@ -1010,9 +1052,16 @@ public final class LauncherActivity extends Activity {
                     message(Tr.t("Couldn't load the game"), failure + Tr.t("\n\nNothing was changed."), null);
                 } else if (failure == null) {
                     // A new game file: its notices again, then the game.
+                    IdEdition.invalidate();
                     warned = false;
                     launched = false;
-                    next();
+                    final Runnable after = afterImport;
+                    afterImport = null;
+                    if (after != null) after.run();
+                    else if (BuildConfig.ID_EDITION && IdEdition.state(this).original) patchMenu(true);
+                    else next();
+                } else {
+                    afterImport = null;
                 }
             });
         }, "game-import").start();
@@ -1046,6 +1095,295 @@ public final class LauncherActivity extends Activity {
         if (!root.renameTo(game)) throw new IOException(Tr.t("Couldn't move the game into place."));
         AppFiles.clearGameSource(this);  // unpacked: Read mode's file is no longer needed
         return null;
+    }
+
+    // --- the Indonesian translation (ID edition) ---------------------------------------------------
+
+    /** Back to where the player was: the game (a waiting one comes back), or the next step at start. */
+    private void backToGame() {
+        launched = false;
+        refresh();
+        next();
+    }
+
+    /**
+     * Install or update the translation in the unpacked game. `offer`: an original disc was just chosen,
+     * so the sheet asks whether to install it now.
+     */
+    private void patchMenu(boolean offer) {
+        refresh();
+        if (!AppFiles.hasGameData(this)) {
+            pickDisc();
+            return;
+        }
+        final IdEdition.State state = IdEdition.state(this);
+        offer = offer && state.original;  // a patched game file needs no offer
+        if (state.readMode) {
+            final Uri source = AppFiles.gameSource(this);
+            final String installed = state.indonesian ? Tr.t("Installed: ") + state.describe() + ". " : "";
+            new Sheet(this, Tr.t("Indonesian Translation"), (offer ? Tr.t("Your game file is the Japanese original. ") : installed)
+                    + Tr.t("The game is played straight from its file (Read), and the translation goes into the "
+                    + "unpacked game. Unpack it first (about 4 GB), or choose an ISO that is already patched."))
+                    .action(Tr.t("Extract, Then Install"), Tr.t("Unpacks the game file, then installs the translation."),
+                            true, false, () -> {
+                                afterImport = () -> patchMenu(true);
+                                loadGame(source);
+                            })
+                    .action(Tr.t("Choose Another File"), null, false, false, this::pickDisc)
+                    .action(offer ? Tr.t("Not Now (Play in Japanese)") : Tr.t("Cancel"), null, false, false, this::backToGame)
+                    .onCancel(this::backToGame)
+                    .show();
+            return;
+        }
+        final String about;
+        if (state.incomplete) {
+            about = Tr.t("Installing the Indonesian patch didn't finish. Install it again (the same patch, or the full "
+                    + "patch); the game plays once it is done.");
+        } else if (state.original) {
+            about = Tr.t("Your game is the Japanese original. Install the Indonesian translation now? It goes straight "
+                    + "into the unpacked game: no new ISO is made.");
+        } else {
+            about = Tr.t("Installed: ") + state.describe();
+        }
+        new Sheet(this, Tr.t("Indonesian Translation"), about)
+                .action(Tr.t("Download and Install"), Tr.t("The newest patch from GitHub (DeZer04): about 730 MB for the "
+                        + "full patch, much less for an update."), true, false, this::installOnline)
+                .action(Tr.t("Choose .patch File"), Tr.t("A basara2_wii_id_*.patch file already on this phone."), false,
+                        false, this::pickPatchFile)
+                .action(offer ? Tr.t("Not Now (Play in Japanese)") : Tr.t("Cancel"), null, false, false, this::backToGame)
+                .onCancel(this::backToGame)
+                .show();
+    }
+
+    /** Looks up the newest release, then asks before downloading. */
+    private void installOnline() {
+        final ProgressBar bar = progressBar();
+        bar.setIndeterminate(true);
+        final Sheet wait = new Sheet(this, Tr.t("Indonesian Translation"), Tr.t("Looking for the newest patch…"))
+                .view(progressBox(bar, text("github.com/" + BuildConfig.PATCH_REPO, 12)))
+                .cancelable(false);
+        wait.show();
+        new Thread(() -> {
+            IdEdition.Release found = null;
+            String error = null;
+            try {
+                found = IdEdition.latest();
+            } catch (IOException e) {
+                error = e.getMessage();
+            }
+            final IdEdition.Release release = found;
+            final String failure = error;
+            main.post(() -> {
+                wait.dismiss();
+                if (failure != null) {
+                    message(Tr.t("Couldn't look for the patch"), failure, this::backToGame);
+                } else if (release == null) {
+                    message(Tr.t("Indonesian Translation"), Tr.t("No Wii patch is released yet."), this::backToGame);
+                } else {
+                    confirmOnline(release);
+                }
+            });
+        }, "patch-check").start();
+    }
+
+    private static String megabytes(long bytes) {
+        return bytes >= (100L << 20) ? String.format(Locale.ROOT, "%.0f MB", bytes / 1048576.0)
+                : String.format(Locale.ROOT, "%.1f MB", Math.max(bytes, 0) / 1048576.0);
+    }
+
+    /** Which patch fits this game, and asks to download it. */
+    private void confirmOnline(IdEdition.Release release) {
+        final IdEdition.State state = IdEdition.state(this);
+        if (state.indonesian && state.version != null && !Updater.isNewer(release.version, state.version)) {
+            new Sheet(this, Tr.t("Indonesian Translation"),
+                    Tr.t("The newest translation, v") + release.version + Tr.t(", is already installed."))
+                    .action(Tr.t("OK"), null, true, false, this::backToGame)
+                    .action(Tr.t("Install Again"), Tr.t("The full patch again, for a game that seems damaged (")
+                            + megabytes(release.full.size) + ")", false, false,
+                            () -> runPatchDownload(release, release.full))
+                    .onCancel(this::backToGame)
+                    .show();
+            return;
+        }
+        final IdEdition.PatchFile file = release.patchFor(state.indonesian ? state.version : null);
+        final boolean known = state.original || state.incomplete || (state.indonesian && state.version != null);
+        final Sheet sheet = new Sheet(this, Tr.t("Install Indonesian v") + release.version + "?",
+                file.name + " • " + megabytes(file.size)
+                        + (file == release.full ? "" : "\n" + Tr.t("A small update from v") + state.version + "."));
+        if (!known) {
+            sheet.warning(Tr.t("Not a game this patch knows"), Tr.t("This game is neither the original disc nor a "
+                    + "known version of the translation, so the result may not play. Unpacking your original ISO or "
+                    + "RVZ again first is safest."));
+        }
+        sheet.note(Tr.t("Keep the app open and the screen on until it is done. The patch is written into the game as "
+                        + "it downloads; nothing is uploaded."))
+                .action(Tr.t("Download and Install"), null, true, false, () -> runPatchDownload(release, file))
+                .action(Tr.t("Cancel"), null, false, false, this::backToGame)
+                .onCancel(this::backToGame)
+                .show();
+    }
+
+    private void runPatchDownload(IdEdition.Release release, IdEdition.PatchFile file) {
+        final IdEdition.Download[] download = new IdEdition.Download[1];
+        runPatch(() -> download[0] = new IdEdition.Download(file.url, file.size), () -> {
+            final IdEdition.Download d = download[0];
+            return d == null ? "" : String.format(Locale.ROOT, Tr.t("Downloaded %s of %s"), megabytes(d.position()),
+                    megabytes(file.size));
+        });
+    }
+
+    /** A .patch file on the phone: the app's browser, or the system picker without "All files access". */
+    private void pickPatchFile() {
+        if (AppFiles.hasFileAccess(this)) {
+            FileBrowser.showFiles(this, FileBrowser.downloads(), Tr.t("Choose the patch file"), null,
+                    f -> f.getName().toLowerCase(Locale.ROOT).endsWith(".patch"),
+                    Tr.t("No folders or .patch files here."),
+                    file -> runPatch(() -> new java.io.FileInputStream(file), null));
+            return;
+        }
+        final Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("*/*");
+        intent.putExtra(android.provider.DocumentsContract.EXTRA_INITIAL_URI, android.provider.DocumentsContract
+                .buildDocumentUri("com.android.externalstorage.documents", "primary:Download"));
+        startActivityForResult(intent, REQUEST_PATCH);
+    }
+
+    /** Opens the patch to read. */
+    private interface PatchSource {
+        java.io.InputStream open() throws IOException;
+    }
+
+    /**
+     * Ends the game, then puts the patch into the unpacked game with a progress sheet (Cancel stops it).
+     * `extra`: a second progress line (the download), or null.
+     */
+    private void runPatch(PatchSource source, java.util.function.Supplier<String> extra) {
+        endGame();  // the game maps linkData.afs while it runs
+        final ProgressBar bar = progressBar();
+        bar.setIndeterminate(true);
+        final TextView label = text(Tr.t("Opening the patch…"), 14);
+        final AtomicBoolean cancel = new AtomicBoolean();
+        final java.io.InputStream[] opened = new java.io.InputStream[1];
+        final Sheet dialog = new Sheet(this, Tr.t("Installing the Indonesian translation"),
+                Tr.t("Keep the app open and the screen on until it is done."))
+                .view(progressBox(bar, label))
+                .cancelable(false);
+        dialog.actionStay(Tr.t("Cancel"), true, name -> {
+            cancel.set(true);
+            name.setText(Tr.t("Stopping…"));
+            label.setText(Tr.t("Stopping…"));
+            final java.io.InputStream in = opened[0];
+            if (in != null) {
+                new Thread(() -> {
+                    try {
+                        in.close();  // a download waiting on the network stops now
+                    } catch (IOException ignored) {
+                        // stopping anyway
+                    }
+                }, "patch-stop").start();
+            }
+        });
+        dialog.show();
+        importing = true;
+        refresh();
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        final File game = AppFiles.gameDir(this);
+        new Thread(() -> {
+            String result = null;
+            String version = null;
+            try (java.io.InputStream in = new java.io.BufferedInputStream(source.open(), 1 << 16)) {
+                opened[0] = in;
+                IdPatch.cleanUp(game);
+                final IdPatch.Info done = IdPatch.apply(game, in, (written, total) -> {
+                    main.post(() -> {
+                        if (cancel.get()) return;
+                        bar.setIndeterminate(false);
+                        bar.setProgress((int) (written * 1000 / Math.max(total, 1)));
+                        final String line = String.format(Locale.ROOT, Tr.t("Written %.2f of %.2f GB"),
+                                written / (double) (1 << 30), total / (double) (1 << 30));
+                        label.setText(extra != null ? line + "\n" + extra.get() : line);
+                    });
+                    return !cancel.get();
+                });
+                if (done == null) result = IdPatch.CANCELLED;
+                else version = done.version;
+            } catch (IdPatch.Failure f) {
+                result = String.format(Locale.ROOT, Tr.t(f.getMessage()), f.args);
+            } catch (Exception e) {
+                result = cancel.get() ? IdPatch.CANCELLED
+                        : (e.getMessage() != null ? e.getMessage() : e.toString());
+            }
+            IdPatch.cleanUp(game);
+            IdEdition.invalidate();
+            final String failure = result;
+            final String installed = version;
+            main.post(() -> {
+                importing = false;
+                dialog.dismiss();
+                getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                refresh();
+                final boolean incomplete = IdEdition.state(this).incomplete;
+                if (failure == null) {
+                    warned = false;
+                    message(Tr.t("Translation installed"), Tr.t("Bahasa Indonesia v") + installed + Tr.t(" is installed. "
+                            + "The ISO or RVZ and the .patch file aren't needed by the app any more."), this::backToGame);
+                } else if (failure.equals(IdPatch.CANCELLED)) {
+                    if (incomplete) {
+                        message(Tr.t("Patch stopped"), Tr.t("The game needs the patch again before it plays."), this::refresh);
+                    } else {
+                        backToGame();
+                    }
+                } else {
+                    message(Tr.t("Couldn't install the patch"), failure + (incomplete
+                            ? Tr.t("\n\nThe game needs the patch again before it plays.")
+                            : Tr.t("\n\nNothing was changed.")), incomplete ? this::refresh : this::backToGame);
+                }
+            });
+        }, "patch-install").start();
+    }
+
+    /**
+     * At start: a newer translation than the one installed? Asks once per version, waiting a few seconds
+     * at most for GitHub. True when the check is under way (it calls next() when done).
+     */
+    private boolean checkPatchUpdate() {
+        final IdEdition.State state = IdEdition.state(this);
+        if (!state.indonesian || state.version == null || state.readMode) return false;
+        final SharedPreferences prefs = getSharedPreferences("id_patch", MODE_PRIVATE);
+        final AtomicBoolean answered = new AtomicBoolean();
+        showState(Tr.t("Looking for a newer translation…"));
+        new Thread(() -> {
+            IdEdition.Release release = null;
+            try {
+                release = IdEdition.latest();
+            } catch (IOException ignored) {
+                // no network: the next start looks again
+            }
+            final IdEdition.Release found = release;
+            main.post(() -> {
+                if (!answered.compareAndSet(false, true) || launched || isFinishing()) return;
+                if (found == null || !Updater.isNewer(found.version, state.version)
+                        || found.version.equals(prefs.getString("skipped", null))) {
+                    next();
+                    return;
+                }
+                final IdEdition.PatchFile file = found.patchFor(state.version);
+                new Sheet(this, Tr.t("Translation update: v") + found.version,
+                        Tr.t("Installed: v") + state.version + "\n" + file.name + " • " + megabytes(file.size))
+                        .action(Tr.t("Update Now"), null, true, false, () -> runPatchDownload(found, file))
+                        .action(Tr.t("Later"), Tr.t("Asked again at the next version."), false, false, () -> {
+                            prefs.edit().putString("skipped", found.version).apply();
+                            next();
+                        })
+                        .onCancel(this::next)
+                        .show();
+            });
+        }, "patch-update-check").start();
+        main.postDelayed(() -> {
+            if (answered.compareAndSet(false, true)) next();
+        }, 4000);
+        return true;
     }
 
     // --- views ---------------------------------------------------------------------------------

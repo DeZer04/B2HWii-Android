@@ -910,3 +910,74 @@ PowerVR B-Series phones with an older Vulkan driver (for example ADVAN S50) drew
 Your save was restored from Basara2Heroes/Saves/Auto.	Save kamu dipulihkan dari Basara2Heroes/Saves/Auto.
 Your save is copied to Basara2Heroes/Saves/Auto whenever it changes, and comes back by itself after the app is uninstalled and installed again (needs "All files access").	Save kamu disalin ke Basara2Heroes/Saves/Auto setiap kali berubah, dan kembali sendiri setelah app di-uninstall lalu dipasang lagi (perlu "Akses semua file").
 Clearer Restart marks in the menu: settings that apply only after a restart carry a yellow "⟳ Restart" tag instead of *. Change one and its row turns yellow, the footer says how many changes wait for Restart, and the Restart button lights up.	Tanda Restart di menu lebih jelas: setting yang baru berlaku setelah restart diberi label kuning "⟳ Restart", bukan *. Ubah salah satunya, barisnya jadi kuning, footer menunjukkan berapa perubahan yang menunggu Mulai Ulang, dan tombol Mulai Ulang menyala.
+# Indonesian edition: the translation's patch, installed and updated in the app (IdEdition, IdPatch)
+Indonesian patch not finished	Patch Indonesia belum selesai
+Indonesian v	Bahasa Indonesia v
+Indonesian	Bahasa Indonesia
+Japanese (original)	Jepang (asli)
+changed	diubah
+couldn't reach GitHub. Check the internet connection and try again.	tidak bisa menghubungi GitHub. Periksa koneksi internet, lalu coba lagi.
+GitHub answered 	GitHub menjawab
+unreadable answer from GitHub: 	jawaban GitHub tidak terbaca:
+The download stopped (the server answered 	Unduhan berhenti (server menjawab
+The download stopped. Check the internet connection and try again.	Unduhan berhenti. Periksa koneksi internet, lalu coba lagi.
+That file isn't a patch of the Indonesian translation for Wii (.patch, BSR2WII2).	File itu bukan patch terjemahan Indonesia untuk Wii (.patch, BSR2WII2).
+That patch file is damaged. Download it again.	File patch itu rusak. Unduh ulang.
+This patch needs a newer version of the app.	Patch ini butuh versi aplikasi yang lebih baru.
+This patch is for %s, not Sengoku Basara 2 Heroes (RBSJ08).	Patch ini untuk %s, bukan Sengoku Basara 2 Heroes (RBSJ08).
+The unpacked game is incomplete. Choose your ISO or RVZ again.	Game hasil ekstrak tidak lengkap. Pilih lagi ISO atau RVZ-mu.
+This patch is an updater for the Indonesian v%s only, and this game isn't that version (%s differs). Use the full patch.	Patch ini updater khusus untuk Bahasa Indonesia v%s, dan game ini bukan versi itu (%s berbeda). Pakai patch penuh.
+The patch needs %.1f GB of free space while it works, and this phone has %.1f GB.	Patch butuh ruang kosong %.1f GB selama berjalan, sedangkan HP ini punya %.1f GB.
+That patch file is cut short (the download didn't finish). Download it again.	File patch itu terpotong (unduhan belum selesai). Unduh ulang.
+The game has no %s. Choose your ISO or RVZ again.	Game tidak punya %s. Pilih lagi ISO atau RVZ-mu.
+The game's %s is damaged. Choose your ISO or RVZ again.	%s di game rusak. Pilih lagi ISO atau RVZ-mu.
+Installing the Indonesian patch didn't finish. Install it again.	Pemasangan patch Indonesia belum selesai. Pasang lagi.
+Indonesian Translation	Terjemahan Indonesia
+Install or update the translation? The game closes without saving while the patch goes in.	Pasang atau update terjemahan? Game ditutup tanpa menyimpan selama patch dipasang.
+Indonesian translation and this edition's patch installer by DeZer04.	Terjemahan Indonesia dan pemasang patch di edisi ini oleh DeZer04.
+Indonesian translation page	Halaman terjemahan Indonesia
+Choose your own ISO or RVZ of the game (Japan, RBSJ08): the original, and the app installs the Indonesian translation, or one already patched. Unpack it once (about 4 GB), or play it straight from the file.	Pilih ISO atau RVZ game milikmu (Jepang, RBSJ08): yang asli, lalu aplikasi memasang terjemahan Indonesia, atau yang sudah dipatch. Ekstrak sekali (sekitar 4 GB), atau mainkan langsung dari file.
+Install Patch Again	Pasang Patch Lagi
+Your game file is the Japanese original. 	File game-mu versi Jepang asli.
+The game is played straight from its file (Read), and the translation goes into the unpacked game. Unpack it first (about 4 GB), or choose an ISO that is already patched.	Game dimainkan langsung dari file-nya (Baca), sedangkan terjemahan dipasang ke game hasil ekstrak. Ekstrak dulu (sekitar 4 GB), atau pilih ISO yang sudah dipatch.
+Extract, Then Install	Ekstrak, Lalu Pasang
+Unpacks the game file, then installs the translation.	Mengekstrak file game, lalu memasang terjemahan.
+Not Now (Play in Japanese)	Nanti Saja (Main Bahasa Jepang)
+Installing the Indonesian patch didn't finish. Install it again (the same patch, or the full patch); the game plays once it is done.	Pemasangan patch Indonesia belum selesai. Pasang lagi (patch yang sama, atau patch penuh); game bisa dimainkan setelah selesai.
+Your game is the Japanese original. Install the Indonesian translation now? It goes straight into the unpacked game: no new ISO is made.	Game-mu versi Jepang asli. Pasang terjemahan Indonesia sekarang? Patch langsung dipasang ke game hasil ekstrak: tidak perlu membuat ISO baru.
+Download and Install	Unduh dan Pasang
+The newest patch from GitHub (DeZer04): about 730 MB for the full patch, much less for an update.	Patch terbaru dari GitHub (DeZer04): sekitar 730 MB untuk patch penuh, jauh lebih kecil untuk update.
+Choose .patch File	Pilih File .patch
+A basara2_wii_id_*.patch file already on this phone.	File basara2_wii_id_*.patch yang sudah ada di HP ini.
+Looking for the newest patch…	Mencari patch terbaru…
+Couldn't look for the patch	Gagal mencari patch
+No Wii patch is released yet.	Belum ada patch Wii yang dirilis.
+The newest translation, v	Terjemahan terbaru, v
+, is already installed.	, sudah terpasang.
+Install Again	Pasang Ulang
+The full patch again, for a game that seems damaged (	Patch penuh sekali lagi, untuk game yang tampak rusak (
+Install Indonesian v	Pasang Bahasa Indonesia v
+A small update from v	Update kecil dari v
+Not a game this patch knows	Game ini tidak dikenali patch
+This game is neither the original disc nor a known version of the translation, so the result may not play. Unpacking your original ISO or RVZ again first is safest.	Game ini bukan disk asli dan bukan versi terjemahan yang dikenal, jadi hasilnya mungkin tidak bisa dimainkan. Paling aman ekstrak ulang ISO atau RVZ aslimu dulu.
+Keep the app open and the screen on until it is done. The patch is written into the game as it downloads; nothing is uploaded.	Biarkan aplikasi terbuka dan layar menyala sampai selesai. Patch ditulis ke game sambil diunduh; tidak ada yang diunggah.
+Downloaded %s of %s	Terunduh %s dari %s
+Choose the patch file	Pilih file patch
+No folders or .patch files here.	Tidak ada folder atau file .patch di sini.
+Opening the patch…	Membuka patch…
+Installing the Indonesian translation	Memasang terjemahan Indonesia
+Keep the app open and the screen on until it is done.	Biarkan aplikasi terbuka dan layar menyala sampai selesai.
+Written %.2f of %.2f GB	Tertulis %.2f dari %.2f GB
+Translation installed	Terjemahan terpasang
+Bahasa Indonesia v	Bahasa Indonesia v
+ is installed. The ISO or RVZ and the .patch file aren't needed by the app any more.	 sudah terpasang. File ISO/RVZ dan file .patch tidak dibutuhkan aplikasi lagi.
+Patch stopped	Patch dihentikan
+The game needs the patch again before it plays.	Game perlu dipatch lagi sebelum bisa dimainkan.
+Couldn't install the patch	Gagal memasang patch
+\n\nThe game needs the patch again before it plays.	\n\nGame perlu dipatch lagi sebelum bisa dimainkan.
+Looking for a newer translation…	Mencari terjemahan yang lebih baru…
+Translation update: v	Update terjemahan: v
+Installed: v	Terpasang: v
+Update Now	Update Sekarang
+Later	Nanti
+Asked again at the next version.	Ditanyakan lagi di versi berikutnya.

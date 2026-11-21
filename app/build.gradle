@@ -3,23 +3,27 @@ plugins {
 }
 
 def beta = project.hasProperty('basaraBeta')
+// The Indonesian edition (this branch): its own app next to the official one, the translation's Wii
+// patch installed and updated from inside the app (IdEdition, IdPatch). -PbasaraOfficial builds the
+// official app as before.
+def idEdition = !project.hasProperty('basaraOfficial')
 
 android {
     namespace 'com.shiinobu.basara'
-    compileSdk 34
+    compileSdk 35
 
     buildFeatures {
         buildConfig true
     }
 
     defaultConfig {
-        applicationId 'com.shiinobu.basara'
+        applicationId idEdition ? 'com.dezer04.basara2id' : 'com.shiinobu.basara'
         // Guest RAM uses memfd_create, which bionic has from Android 11 (API 30).
         minSdk 29
         targetSdk 34
         // -PbasaraVersionCode / -PbasaraVersionName: a newer build for testing the updater.
-        versionCode((project.findProperty('basaraVersionCode') ?: '18') as int)
-        versionName(project.findProperty('basaraVersionName') ?: '0.0.1')
+        versionCode((project.findProperty('basaraVersionCode') ?: (idEdition ? '51' : '18')) as int)
+        versionName(project.findProperty('basaraVersionName') ?: (idEdition ? '1.2.1-id1' : '0.0.1'))
         // -PbasaraBeta: the testers' Beta. Its own package (it installs next to the release), it
         // updates itself from the GitHub pre-releases "v<version>-beta.<N>" (Updater.latestBeta) and
         // locks itself once the Beta is switched off or 1.0.0 is out (BetaGate).
@@ -36,14 +40,34 @@ android {
         buildConfigField 'String', 'BETA_LABEL', '"' + betaLabel.toString().replace('"', '') + '"'
         // Check GitHub for updates (and the Beta's lock); the repo is public. -PbasaraOfflineUpdates: off,
         // for a build handed out by hand.
-        buildConfigField 'boolean', 'ONLINE_UPDATES', (!project.hasProperty('basaraOfflineUpdates')).toString()
+        // The ID edition has no APK releases of its own yet: the official repo's APKs are another app.
+        buildConfigField 'boolean', 'ONLINE_UPDATES', (!idEdition && !project.hasProperty('basaraOfflineUpdates')).toString()
+        buildConfigField 'boolean', 'ID_EDITION', idEdition.toString()
+        // Where the translation's Wii patches are released (tags "wii-v<version>").
+        buildConfigField 'String', 'PATCH_REPO', '"DeZer04/sengoku-basara-2-heroes-id"'
         // -PbasaraCheats=true|false: Settings > Cheats. On in the Beta and in a release unless asked off;
         // with it off the tab is hidden and the game always gets every cheat off.
         def cheats = project.findProperty('basaraCheats')
         buildConfigField 'boolean', 'CHEATS', (cheats != null ? (cheats.toString() == 'true') : true).toString()
-        manifestPlaceholders = [appLabel: beta ? 'Basara Beta' : '@string/app_name']
+        manifestPlaceholders = [appLabel: beta ? 'Basara Beta' : idEdition ? 'Basara 2 Heroes ID' : '@string/app_name']
         ndk {
             abiFilters 'arm64-v8a'
+        }
+    }
+
+    // -PbasaraSigning=<file>: a properties file (basara.keystore, basara.keystorePassword, basara.keyAlias)
+    // with the key releases are signed with, so each one installs over the last. Kept out of the repo.
+    def signingFile = project.findProperty('basaraSigning')
+    signingConfigs {
+        if (signingFile != null) {
+            release {
+                def props = new Properties()
+                file(signingFile).withInputStream { props.load(it) }
+                storeFile file(props['basara.keystore'])
+                storePassword props['basara.keystorePassword']
+                keyAlias props['basara.keyAlias']
+                keyPassword props['basara.keystorePassword']
+            }
         }
     }
 
@@ -51,7 +75,7 @@ android {
         release {
             minifyEnabled false
             // Personal builds: sign with the local debug key so the APK installs directly.
-            signingConfig signingConfigs.debug
+            signingConfig signingFile != null ? signingConfigs.release : signingConfigs.debug
         }
     }
 

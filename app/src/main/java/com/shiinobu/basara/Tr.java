@@ -14,7 +14,7 @@ import java.util.Map;
  * The launcher's language. The source keeps the English text; a translation is a file in assets/lang
  * (one "English<TAB>translation" pair a line, \n for a line break), and any text missing from it
  * stays English. Auto picks Indonesian on a phone set to Indonesia (its language or region), English
- * everywhere else.
+ * everywhere else; the Indonesian edition always picks Indonesian.
  */
 final class Tr {
     static final int AUTO = 0, ENGLISH = 1, INDONESIAN = 2;
@@ -44,6 +44,7 @@ final class Tr {
     /** Auto: Indonesian when the phone's language or region is Indonesia's, else English. */
     static int resolve(int setting) {
         if (setting != AUTO) return setting;
+        if (BuildConfig.ID_EDITION) return INDONESIAN;  // the Indonesian edition speaks Indonesian first
         final Locale locale = Locale.getDefault();
         final String language = locale.getLanguage();
         return "in".equals(language) || "id".equals(language) || "ID".equals(locale.getCountry())
